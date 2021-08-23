@@ -1,0 +1,8 @@
+C:\Projects\sudoku-fable\src\bin\Debug\netstandard2.0\App.deps.json
+C:\Projects\sudoku-fable\src\bin\Debug\netstandard2.0\App.dll
+C:\Projects\sudoku-fable\src\bin\Debug\netstandard2.0\App.pdb
+C:\Projects\sudoku-fable\src\obj\Debug\netstandard2.0\App.fsproj.AssemblyReference.cache
+C:\Projects\sudoku-fable\src\obj\Debug\netstandard2.0\App.AssemblyInfoInputs.cache
+C:\Projects\sudoku-fable\src\obj\Debug\netstandard2.0\App.AssemblyInfo.fs
+C:\Projects\sudoku-fable\src\obj\Debug\netstandard2.0\App.dll
+C:\Projects\sudoku-fable\src\obj\Debug\netstandard2.0\App.pdb
