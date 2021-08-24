@@ -108,7 +108,6 @@ module Sudoku =
                 let rowContents = row pos.Row s |> Series.numbers
                 let colContents = col pos.Col s |> Series.numbers
                 let blockContents = block (Position.block pos) s |> Series.numbers
-                printfn $"Row: {rowContents} \nCol: {colContents} \nBlock: {blockContents}"
                 Set.unionMany [rowContents; colContents; blockContents]
             OneToNine.allSet - contents
 
@@ -161,7 +160,5 @@ module Sudoku =
         | None -> Some s // already full so must be solved
         | Some position ->
             possibilities position s
-            |> fun x -> printfn $"possibilities at {position} are {x}"; x
             |> Seq.tryPick (fun possibility ->
-                printfn $"adding {possibility} to {position} in \n{s}"
                 set position possibility s |> solve)
