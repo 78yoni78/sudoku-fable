@@ -32,7 +32,9 @@ module Position =
         1 + f r + 3 * f c |> OneToNine.ofInt |> Option.get |> Position1D
 
     let all = [for row in OneToNine.all do for col in OneToNine.all -> { Row=Position1D row; Col=Position1D col }]
-
+    
+    let axis = function Row -> row | Col -> col | Block -> block
+    
 module Series =
     let numbers (Series map) = map |> Map.toSeq |> Seq.map snd |> Set.ofSeq
 
@@ -81,6 +83,8 @@ module Axis =
         | Row -> SudokuPrelude.row
         | Col -> SudokuPrelude.col
         | Block -> SudokuPrelude.block
+
+    let contains position (axis, p) = Position.axis axis position |> (=) p
 
 module Sudoku =
     let empty = { Board=Map.empty }
@@ -133,6 +137,14 @@ module Sudoku =
                 let series = Axis.series axis position sudoku
                 let numbers = Series.numbers series
                 if Set.count numbers = OneToNine.allSet.Count then
+                    yield (axis, position)
+        }
+        
+    let partial (sudoku: Sudoku): (Axis * Position1D) seq =
+        seq {
+            for axis, position in allAxes do
+                let series = Axis.series axis position sudoku
+                if Series.count series < OneToNine.allSet.Count then
                     yield (axis, position)
         }
     

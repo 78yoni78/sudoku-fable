@@ -1,10 +1,7 @@
 module App
 
-open Fable
 open Fable.React
 open Fable.React.Props
-open Fable.React.Helpers
-open Fable.React.Standard
 open Elmish
 open Elmish.React
 open Domain
@@ -27,7 +24,17 @@ let update msg model =
     | Solve -> mapGame (Sudoku.solve >> Option.defaultValue model.Game) model
 
 let view (model: Model) dispatch =
-    let cell value f =
+    let wrong = Sudoku.wrong model.Game
+    //let partial = Sudoku.partial model.Game
+    let colors = Map.ofSeq <| seq {
+        for pos in Position.all do
+            if Seq.exists (Axis.contains pos) wrong then
+                yield pos, box "red"
+            //elif not <| Seq.exists (Axis.contains pos) partial then
+            //    yield pos, box "green"
+    }
+
+    let cell position value f =
         input [
             Class "cell"
             Type "text"
@@ -36,6 +43,9 @@ let view (model: Model) dispatch =
             Max 9
             Step 1
             OnInput (fun e -> dispatch <| f e.Value)
+            Style [
+                match colors.TryFind position with Some color -> yield Color color | _ -> ()
+            ]
         ]
     
     let table =
@@ -45,7 +55,7 @@ let view (model: Model) dispatch =
                     tr [] [
                         for col in OneToNine.all ->
                             let position = { Row=Position1D row; Col=Position1D col }
-                            let rec data = cell (Sudoku.get position model.Game) (fun value -> Set (position, OneToNine.parse value))
+                            let rec data = cell position (Sudoku.get position model.Game) (fun value -> Set (position, OneToNine.parse value))
                             td [] [
                                 data
                             ]
