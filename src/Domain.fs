@@ -157,7 +157,7 @@ module Sudoku =
 
     let rec solve (s: Sudoku): Sudoku option = 
         match emptyPositions s |> Seq.tryHead with
-        | None -> Some s // already full so must be solved
+        | None -> if wrong s |> Seq.isEmpty then Some s else None // already full
         | Some position ->
             possibilities position s
             |> Seq.tryPick (fun possibility ->
