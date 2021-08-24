@@ -2,11 +2,21 @@ module Domain
 
 open OneToNine
 
-type Position1D = Position1D of OneToNine
-type Position = { Row: Position1D
-                  Col: Position1D }
+type [<Struct>] Position1D = Position1D of OneToNine
+type [<Struct>] Position = { Row: Position1D
+                             Col: Position1D }
 
-type Series = Series of Map<Position1D, OneToNine>
+type [<Struct>] Series = Series of Map<Position1D, OneToNine>
+
+type [<Struct>] Axis =
+    | Row
+    | Col
+    | Block
+
+type [<Struct>] Classification =
+    | Solved
+    | Wrong
+    | Partial
 
 type Sudoku = { Board: Map<Position, OneToNine> }
 
@@ -23,19 +33,23 @@ module Position =
 
     let all = [for row in OneToNine.all do for col in OneToNine.all -> { Row=Position1D row; Col=Position1D col }]
 
-    //let shareRow { Row=Position1D r1 } { Row=Position1D r2 } = r1 = r2
-    //let shareCol { Col=Position1D c1 } { Col=Position1D c2 } = c1 = c2
-    //let shareBlock { Row=Position1D r1; Col=Position1D c1 } { Row=Position1D r2; Col=Position1D c2 } =
-    //    let x1, y1 = f r1, f c1
-    //    let x2, y2 = f r2, f c2
-    //    x1 = x2 && y1 = y2
-
 module Series =
     let numbers (Series map) = map |> Map.toSeq |> Seq.map snd |> Set.ofSeq
 
-module Sudoku =
-    let empty = { Board=Map.empty }
+    let count (Series map) = map.Count
 
+    let classify (series: Series) =
+        match count series with
+        | 0 -> Partial
+        | count ->
+            let numbers = numbers series
+            match numbers.Count = count, count with
+            | true, 9 -> Solved
+            | true, _ -> Partial
+            | false, _ -> Wrong
+        
+
+module private SudokuPrelude =
     let private mapFst f (a, b) = (f a, b)
 
     let row (r: Position1D) (s: Sudoku) =
@@ -62,6 +76,21 @@ module Sudoku =
         |> Map.ofSeq
         |> Series
 
+module Axis =
+    let series = function
+        | Row -> SudokuPrelude.row
+        | Col -> SudokuPrelude.col
+        | Block -> SudokuPrelude.block
+
+module Sudoku =
+    let empty = { Board=Map.empty }
+
+    let row (r: Position1D) (s: Sudoku) = SudokuPrelude.row r s
+
+    let col (c: Position1D) (s: Sudoku) = SudokuPrelude.col c s
+
+    let block (b: Position1D) (s: Sudoku) = SudokuPrelude.block b s
+
     let set pos value game = { game with Sudoku.Board=Map.add pos value game.Board }
     let setEmpty pos game = { game with Sudoku.Board=Map.remove pos game.Board }
 
@@ -82,21 +111,38 @@ module Sudoku =
     let emptyPositions (s: Sudoku) =
         Position.all |> Seq.filter (s.Board.ContainsKey >> not)
 
+    let private allAxes: (Axis * Position1D) Set =
+        Set [ 
+            for number in OneToNine.all do
+                for axis in [Row; Col; Block] ->
+                    axis, Position1D number
+        ]
     
-    let solved (s: Sudoku) =
-        emptyPositions s |> Seq.isEmpty
+    let wrong (sudoku: Sudoku): (Axis * Position1D) seq =
+        seq {
+            for axis, position in allAxes do
+                let series = Axis.series axis position sudoku
+                let numbers = Series.numbers series
+                if Series.count series <> numbers.Count then
+                    yield (axis, position)
+        }
+        
+    let solved (sudoku: Sudoku): (Axis * Position1D) seq =
+        seq {
+            for axis, position in allAxes do
+                let series = Axis.series axis position sudoku
+                let numbers = Series.numbers series
+                if Set.count numbers = OneToNine.allSet.Count then
+                    yield (axis, position)
+        }
     
-    let wrong (x: Sudoku) =
-        Map.toSeq x.Board
-        |> Seq.map snd
-        |> Set.ofSeq
-        |> Set.count
-        |> (=) (Map.count x.Board)
-    
-    let (|Solved|Wrong|Partial|) x =
-        if solved x then Solved
-        elif wrong x then Wrong
-        else Partial
+    let classify (sudoku: Sudoku) =
+        let mutable seenPartial = false
+        allAxes
+        |> Seq.map (fun (axis, pos) -> Axis.series axis pos sudoku)
+        |> Seq.map Series.classify
+        |> Seq.tryPick (function Wrong -> Some Wrong| Partial -> (seenPartial <- true; None) | Solved -> None)
+        |> Option.defaultWith (fun () -> if seenPartial then Partial else Solved)
 
     let rec solve (s: Sudoku): Sudoku option = 
         match emptyPositions s |> Seq.tryHead with
@@ -104,9 +150,6 @@ module Sudoku =
         | Some position ->
             possibilities position s
             |> fun x -> printfn $"possibilities at {position} are {x}"; x
-            //|> Seq.tryHead |> function
-            //| Some possibility -> set position possibility s |> solve
-            //| None -> failwithf "no possibility!"
             |> Seq.tryPick (fun possibility ->
                 printfn $"adding {possibility} to {position} in \n{s}"
                 set position possibility s |> solve)

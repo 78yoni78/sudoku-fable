@@ -55,10 +55,10 @@ let view (model: Model) dispatch =
 
     div [ Class "sudoku" ] [
         table
-        match model.Game with
-        | Sudoku.Solved -> str "solved"
-        | Sudoku.Wrong -> str "wrong"
-        | Sudoku.Partial -> str "partial"
+        match Sudoku.classify model.Game with
+        | Solved -> str "solved"
+        | Wrong _ -> str "wrong"
+        | Partial _ -> str "partial"
         br []
         button [ OnClick (fun _ -> dispatch Solve) ] [
             str "Solve"
