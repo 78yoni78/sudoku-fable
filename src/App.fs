@@ -8,20 +8,26 @@ open Domain
 open OneToNine
 
 
-type Model = { Game: Sudoku }
+type Notice =
+    | Unsolvable
+
+type Model = { Game: Sudoku; Notice: Notice option }
 
 type Message =
     | Set of Position * OneToNine option
     | Solve
 
-let init() = { Game=Sudoku.empty }
+let init() = { Game=Sudoku.empty; Notice=None }
 
 let update msg model =
-    let mapGame f (model: Model) = { model with Game=f model.Game }
+    printfn $"Message {msg} dispatched to {model}"
     match msg with
     | Set (pos, None) -> { model with Game=Sudoku.setEmpty pos model.Game }
     | Set (pos, Some number) -> { model with Game=Sudoku.set pos number model.Game }
-    | Solve -> mapGame (Sudoku.solve >> Option.defaultValue model.Game) model
+    | Solve ->
+        match Sudoku.solve model.Game with
+        | Some game -> { model with Game=game; Notice=None }
+        | None -> { model with Notice=Some Unsolvable }
 
 let view (model: Model) dispatch =
     let wrong = Sudoku.wrong model.Game
@@ -73,6 +79,9 @@ let view (model: Model) dispatch =
         button [ OnClick (fun _ -> dispatch Solve) ] [
             str "Solve"
         ]
+        str (match model.Notice with
+             | Some Unsolvable -> "Board is unsolvable"
+             | None -> "")
     ]
 
 Program.mkSimple init update view
